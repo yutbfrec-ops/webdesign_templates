@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Template Gallery</title>
+  <meta name="description" content="Landing page templates gallery for client selection" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* 小幅補強：modal 遮罩、滾動鎖定 */
+    .modal-open { overflow: hidden; }
+  </style>
+</head>
+
+<body class="bg-slate-50 text-slate-900">
+  <!-- Header -->
+  <header class="sticky top-0 z-30 backdrop-blur bg-white/80 border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center gap-3">
+      <div class="flex-1">
+        <h1 class="text-lg sm:text-xl font-semibold tracking-tight">Web Template Gallery</h1>
+        <p class="text-xs sm:text-sm text-slate-600">請選擇一個模板風格以啟動專案（支援搜尋、篩選、收藏、預覽）。</p>
+      </div>
+      <button id="btnToggleShortlist"
+        class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm">
+        <span id="shortlistIcon">☆</span>
+        <span>只看收藏</span>
+      </button>
+      <button id="btnExport"
+        class="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800 text-sm">
+        匯出已選
+      </button>
+    </div>
+  </header>
+
+  <!-- Controls -->
+  <main class="max-w-7xl mx-auto px-4 py-6">
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+      <div class="lg:col-span-5">
+        <label class="block text-sm font-medium text-slate-700 mb-1">搜尋模板</label>
+        <input id="searchInput" type="text" placeholder="例如：ecommerce / travel / saas ..."
+          class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-slate-300"/>
+      </div>
+
+      <div class="lg:col-span-4">
+        <label class="block text-sm font-medium text-slate-700 mb-1">產業篩選</label>
+        <select id="categorySelect"
+          class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-slate-300">
+          <option value="__all__">全部</option>
+        </select>
+      </div>
+
+      <div class="lg:col-span-3">
+        <label class="block text-sm font-medium text-slate-700 mb-1">排序</label>
+        <select id="sortSelect"
+          class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-slate-300">
+          <option value="az">名稱 A → Z</option>
+          <option value="za">名稱 Z → A</option>
+          <option value="recent">最近預覽</option>
+          <option value="star">已收藏優先</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="mt-5 flex flex-wrap items-center gap-2 text-sm text-slate-600">
+      <div class="px-3 py-1 rounded-full bg-slate-100 border border-slate-200">
+        總數：<span id="countAll">0</span>
+      </div>
+      <div class="px-3 py-1 rounded-full bg-slate-100 border border-slate-200">
+        顯示：<span id="countShown">0</span>
+      </div>
+      <div class="px-3 py-1 rounded-full bg-slate-100 border border-slate-200">
+        已收藏：<span id="countStar">0</span>
+      </div>
+      <div class="ml-auto text-xs text-slate-500">
+        提示：點「Preview」快速看；點「Open」在新分頁開；點「☆」加入收藏。
+      </div>
+    </section>
+
+    <!-- Grid -->
+    <section class="mt-6">
+      <div id="grid"
+        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      </div>
+
+      <div id="emptyState" class="hidden mt-10 text-center text-slate-600">
+        <div class="text-lg font-medium">找不到符合條件的模板</div>
+        <div class="text-sm mt-1">請調整搜尋字或篩選條件。</div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal -->
+  <div id="modalOverlay" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-black/50" id="modalBackdrop"></div>
+
+    <div class="relative max-w-6xl mx-auto h-[92vh] mt-[4vh] px-4">
+      <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden h-full flex flex-col">
+        <div class="p-4 border-b border-slate-200 flex items-center gap-3">
+          <div class="flex-1 min-w-0">
+            <div class="text-sm text-slate-500">Preview</div>
+            <div id="modalTitle" class="text-base font-semibold truncate">—</div>
+          </div>
+          <a id="modalOpenLink" href="#" target="_blank"
+             class="px-3 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800 text-sm">
+            Open
+          </a>
+          <button id="modalCopyLink"
+             class="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm">
+            Copy Link
+          </button>
+          <button id="modalClose"
+             class="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm">
+            Close
+          </button>
+        </div>
+
+        <div class="flex-1 bg-slate-100">
+          <!-- 注意：不建議 allow-same-origin（安全/隔離）；allow-scripts 足夠大多模板 -->
+          <iframe id="modalFrame" class="w-full h-full"
+            sandbox="allow-scripts allow-forms allow-popups allow-downloads"
+            referrerpolicy="no-referrer"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed z-[60] bottom-5 left-1/2 -translate-x-1/2 hidden">
+    <div class="px-4 py-2 rounded-xl bg-slate-900 text-white text-sm shadow-lg">Copied</div>
+  </div>
+
+<script>
+/** =========================
+ * CONFIG
+ * ========================= */
+const CONFIG = {
+  // 你的模板都在 /pages/<slug>/index.html
+  basePath: "./pages/",
+  // 若你未來改成根目錄直接放 100 個資料夾，把 basePath 改成 "./"
+  // basePath: "./",
+
+  // 模板清單（已依你截圖預填；若你有增減，改這裡即可）
+  templates: [
+    "agriculture","architecture-interior","banking-traditional","blockchain-defi","cleaning","construction",
+    "creator-economy","design-system","ecommerce","ev-charging","fitness-gym","generative-art","hotel-hospitality",
+    "knowledge-base","luxury-premium","medical-clinic","micro-saas","news-media","pet-tech","portfolio-personal",
+    "remote-work","senior-care","space-tech","sustainability-esg","veterinary",
+
+    "ai-chatbot","automotive","beauty-spa","brewery-winery","coding-bootcamp","consulting","cybersecurity",
+    "developer-tool","ecommerce-luxury","event-management","florist","government-public-service","hyperlocal",
+    "language-learning","magazine-blog","membership","museum","nft-web3","pharmacy","productivity-tool",
+    "restaurant-food","service-landing","spatial-computing","sustainable-energy","video-streaming",
+
+    "airline","b2b-service","biohacking","childcare","coffee-shop","coworking","dating-app","digital-products",
+    "educational-app","financial-dashboard","freelancer","healthcare-app","insurance","legal-services",
+    "marketing-agency","mental-health","music-streaming","non-profit","photography","quantum-computing",
+    "robotics-automation","smart-home","sports","theater","travel-tourism","vr-ar-platform",
+
+    "analytics-dashboard","bakery-cafe","biotech","church","conference","creative-agency","dental","drone-fleet",
+    "edutainment","fintech-crypto","gaming","home-services","job-board","logistics-delivery","marketplace",
+    "micro-credentials","newsletter","online-course","podcast","real-estate","saas","social-media-app",
+    "subscription-box","wedding-event"
+  ]
+};
+
+const STORAGE_KEYS = {
+  stars: "tpl_gallery_stars_v1",
+  recents: "tpl_gallery_recents_v1"
+};
+
+function getStars() {
+  try { return new Set(JSON.parse(localStorage.getItem(STORAGE_KEYS.stars) || "[]")); }
+  catch { return new Set(); }
+}
+function setStars(starsSet) {
+  localStorage.setItem(STORAGE_KEYS.stars, JSON.stringify([...starsSet]));
+}
+function getRecents() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.recents) || "[]"); }
+  catch { return []; }
+}
+function pushRecent(slug) {
+  const arr = getRecents().filter(x => x !== slug);
+  arr.unshift(slug);
+  localStorage.setItem(STORAGE_KEYS.recents, JSON.stringify(arr.slice(0, 50)));
+}
+
+/** =========================
+ * STATE
+ * ========================= */
+let state = {
+  query: "",
+  category: "__all__",
+  sort: "az",
+  shortlistOnly: false,
+  stars: getStars()
+};
+
+/** =========================
+ * DOM
+ * ========================= */
+const el = {
+  grid: document.getElementById("grid"),
+  empty: document.getElementById("emptyState"),
+  search: document.getElementById("searchInput"),
+  category: document.getElementById("categorySelect"),
+  sort: document.getElementById("sortSelect"),
+  btnShortlist: document.getElementById("btnToggleShortlist"),
+  btnExport: document.getElementById("btnExport"),
+  countAll: document.getElementById("countAll"),
+  countShown: document.getElementById("countShown"),
+  countStar: document.getElementById("countStar"),
+
+  modalOverlay: document.getElementById("modalOverlay"),
+  modalBackdrop: document.getElementById("modalBackdrop"),
+  modalClose: document.getElementById("modalClose"),
+  modalTitle: document.getElementById("modalTitle"),
+  modalFrame: document.getElementById("modalFrame"),
+  modalOpenLink: document.getElementById("modalOpenLink"),
+  modalCopyLink: document.getElementById("modalCopyLink"),
+
+  toast: document.getElementById("toast")
+};
+
+function templateUrl(slug) {
+  // 指向 /pages/<slug>/index.html
+  return `${CONFIG.basePath}${slug}/index.html`;
+}
+
+function humanize(slug) {
+  return slug.replace(/-/g, " ");
+}
+
+function showToast(text="Copied") {
+  el.toast.querySelector("div").textContent = text;
+  el.toast.classList.remove("hidden");
+  setTimeout(() => el.toast.classList.add("hidden"), 1200);
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => showToast("Copied")).catch(() => {
+    // fallback
+    const t = document.createElement("textarea");
+    t.value = text;
+    document.body.appendChild(t);
+    t.select();
+    document.execCommand("copy");
+    document.body.removeChild(t);
+    showToast("Copied");
+  });
+}
+
+/** =========================
+ * RENDER
+ * ========================= */
+function buildCategoryOptions() {
+  const slugs = CONFIG.templates.slice().sort((a,b)=>a.localeCompare(b));
+  const frag = document.createDocumentFragment();
+  slugs.forEach(slug => {
+    const opt = document.createElement("option");
+    opt.value = slug;
+    opt.textContent = slug;
+    frag.appendChild(opt);
+  });
+  el.category.appendChild(frag);
+}
+
+function applyFilters() {
+  let list = CONFIG.templates.map(slug => ({
+    slug,
+    name: humanize(slug),
+    url: templateUrl(slug),
+    starred: state.stars.has(slug)
+  }));
+
+  // query
+  if (state.query.trim()) {
+    const q = state.query.trim().toLowerCase();
+    list = list.filter(x => x.slug.includes(q) || x.name.toLowerCase().includes(q));
+  }
+
+  // category
+  if (state.category !== "__all__") {
+    list = list.filter(x => x.slug === state.category);
+  }
+
+  // shortlist
+  if (state.shortlistOnly) {
+    list = list.filter(x => x.starred);
+  }
+
+  // sort
+  if (state.sort === "az") {
+    list.sort((a,b)=>a.slug.localeCompare(b.slug));
+  } else if (state.sort === "za") {
+    list.sort((a,b)=>b.slug.localeCompare(a.slug));
+  } else if (state.sort === "recent") {
+    const rec = getRecents();
+    const rank = new Map(rec.map((s,i)=>[s,i]));
+    list.sort((a,b)=>{
+      const ra = rank.has(a.slug) ? rank.get(a.slug) : 9999;
+      const rb = rank.has(b.slug) ? rank.get(b.slug) : 9999;
+      if (ra !== rb) return ra - rb;
+      return a.slug.localeCompare(b.slug);
+    });
+  } else if (state.sort === "star") {
+    list.sort((a,b)=>{
+      if (a.starred !== b.starred) return a.starred ? -1 : 1;
+      return a.slug.localeCompare(b.slug);
+    });
+  }
+
+  return list;
+}
+
+function cardTemplate(item) {
+  const star = item.starred ? "★" : "☆";
+  return `
+    <div class="group bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition overflow-hidden">
+      <div class="p-4">
+        <div class="flex items-start gap-3">
+          <div class="flex-1 min-w-0">
+            <div class="text-xs text-slate-500">Template</div>
+            <div class="text-base font-semibold truncate">${item.slug}</div>
+            <div class="text-xs text-slate-500 mt-1 truncate">${item.url}</div>
+          </div>
+          <button data-action="star" data-slug="${item.slug}"
+            class="shrink-0 w-10 h-10 rounded-xl border border-slate-200 hover:bg-slate-50 text-lg leading-none">
+            ${star}
+          </button>
+        </div>
+
+        <div class="mt-4 flex flex-wrap gap-2">
+          <button data-action="preview" data-slug="${item.slug}"
+            class="px-3 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800 text-sm">
+            Preview
+          </button>
+          <a href="${item.url}" target="_blank"
+            class="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm">
+            Open
+          </a>
+          <button data-action="copy" data-slug="${item.slug}"
+            class="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm">
+            Copy Link
+          </button>
+        </div>
+      </div>
+
+      <div class="px-4 pb-4">
+        <div class="text-xs text-slate-500">建議用途</div>
+        <div class="text-sm text-slate-700 truncate">${humanize(item.slug)}</div>
+      </div>
+    </div>
+  `;
+}
+
+function render() {
+  const list = applyFilters();
+
+  el.countAll.textContent = CONFIG.templates.length;
+  el.countShown.textContent = list.length;
+  el.countStar.textContent = state.stars.size;
+
+  el.grid.innerHTML = list.map(cardTemplate).join("");
+  el.empty.classList.toggle("hidden", list.length !== 0);
+}
+
+/** =========================
+ * MODAL
+ * ========================= */
+function openModal(slug) {
+  const url = templateUrl(slug);
+  el.modalTitle.textContent = slug;
+  el.modalOpenLink.href = url;
+
+  // 只有在打開時才載入 iframe（避免 100 個同時載入）
+  el.modalFrame.src = url;
+
+  el.modalOverlay.classList.remove("hidden");
+  document.body.classList.add("modal-open");
+  pushRecent(slug);
+}
+
+function closeModal() {
+  el.modalOverlay.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+  // 關掉就清空 iframe，避免背景繼續跑
+  el.modalFrame.src = "about:blank";
+}
+
+/** =========================
+ * EVENTS
+ * ========================= */
+el.search.addEventListener("input", (e) => {
+  state.query = e.target.value;
+  render();
+});
+
+el.category.addEventListener("change", (e) => {
+  state.category = e.target.value;
+  render();
+});
+
+el.sort.addEventListener("change", (e) => {
+  state.sort = e.target.value;
+  render();
+});
+
+el.btnShortlist.addEventListener("click", () => {
+  state.shortlistOnly = !state.shortlistOnly;
+  document.getElementById("shortlistIcon").textContent = state.shortlistOnly ? "★" : "☆";
+  render();
+});
+
+el.btnExport.addEventListener("click", () => {
+  const selected = [...state.stars].sort((a,b)=>a.localeCompare(b));
+  const lines = selected.map(slug => `${slug}  ->  ${templateUrl(slug)}`);
+  const payload = selected.length
+    ? `Selected templates (${selected.length}):\n` + lines.join("\n")
+    : "No template selected.";
+  copyToClipboard(payload);
+});
+
+el.grid.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-action]");
+  if (!btn) return;
+  const action = btn.getAttribute("data-action");
+  const slug = btn.getAttribute("data-slug");
+  if (!slug) return;
+
+  if (action === "preview") {
+    openModal(slug);
+  } else if (action === "copy") {
+    copyToClipboard(location.origin
+      ? new URL(templateUrl(slug), location.href).toString()
+      : templateUrl(slug)
+    );
+  } else if (action === "star") {
+    if (state.stars.has(slug)) state.stars.delete(slug);
+    else state.stars.add(slug);
+    setStars(state.stars);
+    render();
+  }
+});
+
+el.modalClose.addEventListener("click", closeModal);
+el.modalBackdrop.addEventListener("click", closeModal);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !el.modalOverlay.classList.contains("hidden")) closeModal();
+});
+
+el.modalCopyLink.addEventListener("click", () => {
+  copyToClipboard(new URL(el.modalOpenLink.href, location.href).toString());
+});
+
+/** =========================
+ * INIT
+ * ========================= */
+buildCategoryOptions();
+render();
+</script>
+</body>
+</html>
