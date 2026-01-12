@@ -3,122 +3,371 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Template Gallery</title>
-  <meta name="description" content="Landing page templates gallery for client selection" />
+  <title>Web Template Gallery</title>
+  <meta name="description" content="Commercial template selection gallery for client preview and shortlist." />
+  <meta name="color-scheme" content="light" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          boxShadow: {
+            soft: "0 10px 30px rgba(15, 23, 42, 0.10)",
+            lift: "0 16px 50px rgba(15, 23, 42, 0.14)",
+          }
+        }
+      }
+    }
+  </script>
   <style>
-    /* 小幅補強：modal 遮罩、滾動鎖定 */
+    :root { --bg: #f8fafc; }
+    body { background: var(--bg); }
     .modal-open { overflow: hidden; }
+    .glass { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+    .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+    .safe-top { padding-top: env(safe-area-inset-top); }
+    /* 卡片封面：更精緻但不依賴圖片 */
+    .cover {
+      position: relative;
+      border-radius: 1.25rem;
+      overflow: hidden;
+    }
+    .cover::before{
+      content:"";
+      position:absolute; inset:-2px;
+      background:
+        radial-gradient(1000px 400px at 20% 10%, rgba(255,255,255,.35), transparent 55%),
+        radial-gradient(900px 420px at 85% 20%, rgba(255,255,255,.25), transparent 60%),
+        linear-gradient(135deg, rgba(255,255,255,.16), rgba(255,255,255,0));
+      opacity:.95;
+      pointer-events:none;
+    }
+    .cover::after{
+      content:"";
+      position:absolute; inset:0;
+      background-image:
+        linear-gradient(to right, rgba(255,255,255,.18) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,.10) 1px, transparent 1px);
+      background-size: 24px 24px;
+      opacity:.18;
+      pointer-events:none;
+      mix-blend-mode: overlay;
+    }
+    /* 讓 iframe modal 更像產品預覽 */
+    .device-frame {
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      box-shadow: 0 18px 60px rgba(15, 23, 42, 0.22);
+      overflow: hidden;
+      background: white;
+    }
   </style>
 </head>
 
-<body class="bg-slate-50 text-slate-900">
-  <!-- Header -->
-  <header class="sticky top-0 z-30 backdrop-blur bg-white/80 border-b border-slate-200">
-    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center gap-3">
-      <div class="flex-1">
-        <h1 class="text-lg sm:text-xl font-semibold tracking-tight">Web Template Gallery</h1>
-        <p class="text-xs sm:text-sm text-slate-600">請選擇一個模板風格以啟動專案（支援搜尋、篩選、收藏、預覽）。</p>
+<body class="text-slate-900">
+  <!-- Top Bar -->
+  <header class="sticky top-0 z-40 border-b border-slate-200 bg-white/80 glass safe-top">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-10 h-10 rounded-xl bg-slate-900 text-white grid place-items-center shadow-soft">
+          <span class="text-sm font-semibold">TG</span>
+        </div>
+        <div class="min-w-0">
+          <div class="text-sm sm:text-base font-semibold tracking-tight truncate">Web Template Gallery</div>
+          <div class="text-xs text-slate-500 truncate">商用選樣｜快速預覽＋收藏 shortlist｜一鍵匯出開案清單</div>
+        </div>
       </div>
-      <button id="btnToggleShortlist"
-        class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm">
-        <span id="shortlistIcon">☆</span>
-        <span>只看收藏</span>
-      </button>
-      <button id="btnExport"
-        class="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800 text-sm">
-        匯出已選
-      </button>
+
+      <div class="ml-auto flex items-center gap-2">
+        <div class="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white">
+          <span class="text-xs text-slate-500">已選</span>
+          <span id="selectedCountBadge" class="text-sm font-semibold">0</span>
+        </div>
+
+        <button id="btnToggleShortlist"
+          class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm">
+          <span id="shortlistIcon" class="text-lg leading-none">☆</span>
+          <span class="hidden sm:inline">只看收藏</span>
+          <span class="sm:hidden">收藏</span>
+        </button>
+
+        <button id="btnExport"
+          class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-sm shadow-soft">
+          匯出已選
+        </button>
+      </div>
     </div>
   </header>
 
-  <!-- Controls -->
-  <main class="max-w-7xl mx-auto px-4 py-6">
-    <section class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-      <div class="lg:col-span-5">
-        <label class="block text-sm font-medium text-slate-700 mb-1">搜尋模板</label>
-        <input id="searchInput" type="text" placeholder="例如：ecommerce / travel / saas ..."
-          class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-slate-300"/>
-      </div>
+  <!-- Hero -->
+  <section class="relative">
+    <div class="max-w-7xl mx-auto px-4 pt-6 pb-4">
+      <div class="rounded-3xl border border-slate-200 bg-white shadow-soft overflow-hidden">
+        <div class="px-6 py-6 sm:px-8 sm:py-8">
+          <div class="flex flex-col lg:flex-row gap-6 lg:gap-10">
+            <div class="flex-1">
+              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs text-slate-700">
+                商用選樣流程
+              </div>
+              <h2 class="mt-3 text-2xl sm:text-3xl font-semibold tracking-tight">
+                先選風格，再開案：讓客戶快速做決策
+              </h2>
+              <p class="mt-2 text-slate-600 leading-relaxed">
+                建議流程：先用「搜尋 / 產業」縮小範圍 → 點 Preview 快速看版型 → 收藏 3–5 個候選 → 匯出清單用於開案確認。
+              </p>
 
-      <div class="lg:col-span-4">
-        <label class="block text-sm font-medium text-slate-700 mb-1">產業篩選</label>
-        <select id="categorySelect"
-          class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-slate-300">
-          <option value="__all__">全部</option>
-        </select>
-      </div>
+              <div class="mt-5 flex flex-wrap gap-2">
+                <button class="px-3 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-sm shadow-soft"
+                  onclick="document.getElementById('searchInput').focus()">
+                  開始搜尋
+                </button>
+                <button class="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm"
+                  onclick="scrollToGrid()">
+                  瀏覽全部模板
+                </button>
+                <button class="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm"
+                  onclick="openShortlistPanel()">
+                  查看已選（shortlist）
+                </button>
+              </div>
+            </div>
 
-      <div class="lg:col-span-3">
-        <label class="block text-sm font-medium text-slate-700 mb-1">排序</label>
-        <select id="sortSelect"
-          class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-slate-300">
-          <option value="az">名稱 A → Z</option>
-          <option value="za">名稱 Z → A</option>
-          <option value="recent">最近預覽</option>
-          <option value="star">已收藏優先</option>
-        </select>
-      </div>
-    </section>
+            <div class="lg:w-[420px]">
+              <div class="grid grid-cols-3 gap-3">
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <div class="text-xs text-slate-500">總數</div>
+                  <div id="countAllHero" class="text-2xl font-semibold mt-1">0</div>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <div class="text-xs text-slate-500">顯示</div>
+                  <div id="countShownHero" class="text-2xl font-semibold mt-1">0</div>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <div class="text-xs text-slate-500">已選</div>
+                  <div id="countStarHero" class="text-2xl font-semibold mt-1">0</div>
+                </div>
+              </div>
 
-    <section class="mt-5 flex flex-wrap items-center gap-2 text-sm text-slate-600">
-      <div class="px-3 py-1 rounded-full bg-slate-100 border border-slate-200">
-        總數：<span id="countAll">0</span>
-      </div>
-      <div class="px-3 py-1 rounded-full bg-slate-100 border border-slate-200">
-        顯示：<span id="countShown">0</span>
-      </div>
-      <div class="px-3 py-1 rounded-full bg-slate-100 border border-slate-200">
-        已收藏：<span id="countStar">0</span>
-      </div>
-      <div class="ml-auto text-xs text-slate-500">
-        提示：點「Preview」快速看；點「Open」在新分頁開；點「☆」加入收藏。
-      </div>
-    </section>
+              <div class="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
+                <div class="text-sm font-semibold">快速入口（Featured）</div>
+                <div class="mt-3 flex flex-wrap gap-2" id="featuredChips"></div>
+                <div class="mt-3 text-xs text-slate-500">
+                  點一下即可快速篩選該產業，讓客戶更快看到「相關風格」。
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-    <!-- Grid -->
-    <section class="mt-6">
-      <div id="grid"
-        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div class="px-6 sm:px-8 py-4 border-t border-slate-200 bg-slate-50 text-xs text-slate-600">
+          提示：Preview 內可切換 Desktop / Tablet / Mobile，方便你直接確認不同裝置呈現。
+        </div>
       </div>
+    </div>
+  </section>
 
-      <div id="emptyState" class="hidden mt-10 text-center text-slate-600">
-        <div class="text-lg font-medium">找不到符合條件的模板</div>
-        <div class="text-sm mt-1">請調整搜尋字或篩選條件。</div>
-      </div>
+  <!-- Main -->
+  <main class="max-w-7xl mx-auto px-4 pb-28 sm:pb-12">
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+      <!-- Filters -->
+      <aside class="lg:col-span-4">
+        <div class="rounded-3xl border border-slate-200 bg-white shadow-soft overflow-hidden lg:sticky lg:top-20">
+          <div class="p-5 border-b border-slate-200">
+            <div class="text-sm font-semibold">篩選與排序</div>
+            <div class="text-xs text-slate-500 mt-1">縮小範圍後再 Preview，決策會快很多。</div>
+          </div>
+
+          <div class="p-5 space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">搜尋模板</label>
+              <input id="searchInput" type="text" placeholder="例如：ecommerce / travel / saas ..."
+                class="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-slate-300"/>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">產業篩選</label>
+              <select id="categorySelect"
+                class="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-slate-300">
+                <option value="__all__">全部</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">排序</label>
+              <select id="sortSelect"
+                class="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-slate-300">
+                <option value="az">名稱 A → Z</option>
+                <option value="za">名稱 Z → A</option>
+                <option value="recent">最近預覽</option>
+                <option value="star">已收藏優先</option>
+              </select>
+            </div>
+
+            <div class="flex gap-2">
+              <button id="btnClear"
+                class="flex-1 px-3 py-3 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-sm">
+                清除條件
+              </button>
+              <button id="btnRandom"
+                class="flex-1 px-3 py-3 rounded-2xl bg-slate-900 text-white hover:bg-slate-800 text-sm shadow-soft">
+                隨機推薦
+              </button>
+            </div>
+          </div>
+
+          <div class="px-5 py-4 border-t border-slate-200 bg-slate-50 text-xs text-slate-600">
+            <div class="flex flex-wrap gap-2 items-center">
+              <span class="px-2 py-1 rounded-full bg-white border border-slate-200">總數：<span id="countAll">0</span></span>
+              <span class="px-2 py-1 rounded-full bg-white border border-slate-200">顯示：<span id="countShown">0</span></span>
+              <span class="px-2 py-1 rounded-full bg-white border border-slate-200">已收藏：<span id="countStar">0</span></span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Grid -->
+      <section class="lg:col-span-8" id="gridAnchor">
+        <!-- Desktop shortlist panel -->
+        <div class="hidden lg:block mb-5">
+          <div class="rounded-3xl border border-slate-200 bg-white shadow-soft overflow-hidden">
+            <div class="p-5 flex items-center gap-3">
+              <div class="flex-1">
+                <div class="text-sm font-semibold">Shortlist（已選模板）</div>
+                <div class="text-xs text-slate-500 mt-1">建議保留 3–5 個候選，匯出後用於需求確認與報價。</div>
+              </div>
+              <button id="btnShortlistExportTop"
+                class="px-3 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-sm shadow-soft">
+                匯出清單
+              </button>
+            </div>
+            <div class="px-5 pb-5">
+              <div id="shortlistInline" class="flex flex-wrap gap-2"></div>
+              <div id="shortlistInlineEmpty" class="text-sm text-slate-500 hidden">尚未收藏任何模板。可先 Preview，再按 ☆ 加入收藏。</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4" id="grid"></div>
+
+        <div id="emptyState" class="hidden mt-10 text-center">
+          <div class="text-lg font-semibold text-slate-800">找不到符合條件的模板</div>
+          <div class="text-sm mt-1 text-slate-500">請調整搜尋字或篩選條件。</div>
+        </div>
+      </section>
     </section>
   </main>
 
-  <!-- Modal -->
+  <!-- Mobile bottom bar -->
+  <div class="fixed bottom-0 left-0 right-0 z-40 lg:hidden safe-bottom">
+    <div class="mx-3 mb-3 rounded-2xl border border-slate-200 bg-white/90 glass shadow-lift">
+      <div class="p-3 flex items-center gap-3">
+        <div class="flex-1 min-w-0">
+          <div class="text-xs text-slate-500">已選</div>
+          <div class="text-sm font-semibold truncate"><span id="selectedCountMobile">0</span> 個模板</div>
+        </div>
+        <button class="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm"
+          onclick="openShortlistPanel()">
+          查看
+        </button>
+        <button class="px-3 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-sm shadow-soft"
+          onclick="exportSelection()">
+          匯出
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preview Modal -->
   <div id="modalOverlay" class="hidden fixed inset-0 z-50">
     <div class="absolute inset-0 bg-black/50" id="modalBackdrop"></div>
 
     <div class="relative max-w-6xl mx-auto h-[92vh] mt-[4vh] px-4">
-      <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden h-full flex flex-col">
-        <div class="p-4 border-b border-slate-200 flex items-center gap-3">
+      <div class="bg-white rounded-3xl shadow-lift border border-slate-200 overflow-hidden h-full flex flex-col">
+        <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center gap-3">
           <div class="flex-1 min-w-0">
-            <div class="text-sm text-slate-500">Preview</div>
+            <div class="text-xs text-slate-500">Preview</div>
             <div id="modalTitle" class="text-base font-semibold truncate">—</div>
           </div>
-          <a id="modalOpenLink" href="#" target="_blank"
-             class="px-3 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800 text-sm">
-            Open
-          </a>
-          <button id="modalCopyLink"
-             class="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm">
-            Copy Link
+
+          <div class="flex items-center gap-2 flex-wrap">
+            <div class="inline-flex rounded-xl border border-slate-200 bg-white overflow-hidden">
+              <button class="px-3 py-2 text-sm hover:bg-slate-50" data-device="desktop">Desktop</button>
+              <button class="px-3 py-2 text-sm hover:bg-slate-50 border-l border-slate-200" data-device="tablet">Tablet</button>
+              <button class="px-3 py-2 text-sm hover:bg-slate-50 border-l border-slate-200" data-device="mobile">Mobile</button>
+            </div>
+
+            <a id="modalOpenLink" href="#" target="_blank"
+              class="px-3 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-sm shadow-soft">
+              Open
+            </a>
+            <button id="modalCopyLink"
+              class="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm">
+              Copy Link
+            </button>
+            <button id="modalStar"
+              class="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm">
+              ☆ 收藏
+            </button>
+            <button id="modalClose"
+              class="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm">
+              Close
+            </button>
+          </div>
+        </div>
+
+        <div class="flex-1 bg-slate-100 grid place-items-center p-4">
+          <div id="deviceWrap" class="device-frame w-full h-full">
+            <iframe id="modalFrame" class="w-full h-full"
+              sandbox="allow-scripts allow-forms allow-popups allow-downloads"
+              referrerpolicy="no-referrer"></iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shortlist Panel Modal -->
+  <div id="shortlistOverlay" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-black/40" onclick="closeShortlistPanel()"></div>
+    <div class="relative max-w-3xl mx-auto mt-[8vh] px-4">
+      <div class="bg-white rounded-3xl border border-slate-200 shadow-lift overflow-hidden">
+        <div class="p-5 border-b border-slate-200 flex items-center gap-3">
+          <div class="flex-1">
+            <div class="text-sm font-semibold">Shortlist（已選模板）</div>
+            <div class="text-xs text-slate-500 mt-1">可直接匯出文字清單給你或客戶確認。</div>
+          </div>
+          <button class="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm"
+            onclick="closeShortlistPanel()">
+            關閉
           </button>
-          <button id="modalClose"
-             class="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm">
-            Close
+          <button class="px-3 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-sm shadow-soft"
+            onclick="exportSelection()">
+            匯出
           </button>
         </div>
 
-        <div class="flex-1 bg-slate-100">
-          <!-- 注意：不建議 allow-same-origin（安全/隔離）；allow-scripts 足夠大多模板 -->
-          <iframe id="modalFrame" class="w-full h-full"
-            sandbox="allow-scripts allow-forms allow-popups allow-downloads"
-            referrerpolicy="no-referrer"></iframe>
+        <div class="p-5">
+          <div id="shortlistList" class="space-y-2"></div>
+          <div id="shortlistEmpty" class="text-sm text-slate-500 hidden">尚未收藏任何模板。請先在列表按 ☆ 收藏。</div>
+
+          <div class="mt-4 flex flex-wrap gap-2">
+            <button class="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm"
+              onclick="copySelection()">
+              複製清單
+            </button>
+            <button class="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm"
+              onclick="downloadSelectionTxt()">
+              下載 .txt
+            </button>
+            <button class="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm"
+              onclick="clearStars()">
+              清空收藏
+            </button>
+          </div>
+
+          <div class="mt-4 text-xs text-slate-500">
+            分享技巧：你可以把網址加上 <span class="font-mono">?pick=xxx,yyy</span> 傳給客戶，他打開就會自動把候選打星。
+          </div>
         </div>
       </div>
     </div>
@@ -126,7 +375,7 @@
 
   <!-- Toast -->
   <div id="toast" class="fixed z-[60] bottom-5 left-1/2 -translate-x-1/2 hidden">
-    <div class="px-4 py-2 rounded-xl bg-slate-900 text-white text-sm shadow-lg">Copied</div>
+    <div class="px-4 py-2 rounded-2xl bg-slate-900 text-white text-sm shadow-lift">Copied</div>
   </div>
 
 <script>
@@ -134,12 +383,7 @@
  * CONFIG
  * ========================= */
 const CONFIG = {
-  // 你的模板都在 /pages/<slug>/index.html
   basePath: "./pages/",
-  // 若你未來改成根目錄直接放 100 個資料夾，把 basePath 改成 "./"
-  // basePath: "./",
-
-  // 模板清單（已依你截圖預填；若你有增減，改這裡即可）
   templates: [
     "agriculture","architecture-interior","banking-traditional","blockchain-defi","cleaning","construction",
     "creator-economy","design-system","ecommerce","ev-charging","fitness-gym","generative-art","hotel-hospitality",
@@ -160,30 +404,14 @@ const CONFIG = {
     "edutainment","fintech-crypto","gaming","home-services","job-board","logistics-delivery","marketplace",
     "micro-credentials","newsletter","online-course","podcast","real-estate","saas","social-media-app",
     "subscription-box","wedding-event"
-  ]
+  ],
+  featured: ["saas","ecommerce","b2b-service","creative-agency","real-estate","travel-tourism","ai-chatbot","fintech-crypto"]
 };
 
 const STORAGE_KEYS = {
-  stars: "tpl_gallery_stars_v1",
-  recents: "tpl_gallery_recents_v1"
+  stars: "tpl_gallery_stars_v2",
+  recents: "tpl_gallery_recents_v2"
 };
-
-function getStars() {
-  try { return new Set(JSON.parse(localStorage.getItem(STORAGE_KEYS.stars) || "[]")); }
-  catch { return new Set(); }
-}
-function setStars(starsSet) {
-  localStorage.setItem(STORAGE_KEYS.stars, JSON.stringify([...starsSet]));
-}
-function getRecents() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.recents) || "[]"); }
-  catch { return []; }
-}
-function pushRecent(slug) {
-  const arr = getRecents().filter(x => x !== slug);
-  arr.unshift(slug);
-  localStorage.setItem(STORAGE_KEYS.recents, JSON.stringify(arr.slice(0, 50)));
-}
 
 /** =========================
  * STATE
@@ -202,14 +430,31 @@ let state = {
 const el = {
   grid: document.getElementById("grid"),
   empty: document.getElementById("emptyState"),
+
   search: document.getElementById("searchInput"),
   category: document.getElementById("categorySelect"),
   sort: document.getElementById("sortSelect"),
+
   btnShortlist: document.getElementById("btnToggleShortlist"),
   btnExport: document.getElementById("btnExport"),
+  btnClear: document.getElementById("btnClear"),
+  btnRandom: document.getElementById("btnRandom"),
+  btnShortlistExportTop: document.getElementById("btnShortlistExportTop"),
+
   countAll: document.getElementById("countAll"),
   countShown: document.getElementById("countShown"),
   countStar: document.getElementById("countStar"),
+  countAllHero: document.getElementById("countAllHero"),
+  countShownHero: document.getElementById("countShownHero"),
+  countStarHero: document.getElementById("countStarHero"),
+
+  selectedCountBadge: document.getElementById("selectedCountBadge"),
+  selectedCountMobile: document.getElementById("selectedCountMobile"),
+
+  featuredChips: document.getElementById("featuredChips"),
+
+  shortlistInline: document.getElementById("shortlistInline"),
+  shortlistInlineEmpty: document.getElementById("shortlistInlineEmpty"),
 
   modalOverlay: document.getElementById("modalOverlay"),
   modalBackdrop: document.getElementById("modalBackdrop"),
@@ -218,28 +463,50 @@ const el = {
   modalFrame: document.getElementById("modalFrame"),
   modalOpenLink: document.getElementById("modalOpenLink"),
   modalCopyLink: document.getElementById("modalCopyLink"),
+  modalStar: document.getElementById("modalStar"),
+  deviceWrap: document.getElementById("deviceWrap"),
+
+  shortlistOverlay: document.getElementById("shortlistOverlay"),
+  shortlistList: document.getElementById("shortlistList"),
+  shortlistEmpty: document.getElementById("shortlistEmpty"),
 
   toast: document.getElementById("toast")
 };
 
+/** =========================
+ * UTIL
+ * ========================= */
 function templateUrl(slug) {
-  // 指向 /pages/<slug>/index.html
   return `${CONFIG.basePath}${slug}/index.html`;
 }
-
 function humanize(slug) {
   return slug.replace(/-/g, " ");
 }
-
+function slugHash(str){
+  let h = 2166136261;
+  for (let i=0;i<str.length;i++){
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0);
+}
+function coverStyle(slug){
+  const h = slugHash(slug) % 360;
+  const h2 = (h + 28) % 360;
+  return `
+    background:
+      radial-gradient(1200px 500px at 10% 10%, hsla(${h}, 90%, 62%, .55), transparent 60%),
+      radial-gradient(900px 420px at 90% 20%, hsla(${h2}, 90%, 60%, .42), transparent 62%),
+      linear-gradient(135deg, hsla(${h}, 70%, 50%, .95), hsla(${h2}, 70%, 45%, .95));
+  `;
+}
 function showToast(text="Copied") {
   el.toast.querySelector("div").textContent = text;
   el.toast.classList.remove("hidden");
   setTimeout(() => el.toast.classList.add("hidden"), 1200);
 }
-
 function copyToClipboard(text) {
   navigator.clipboard.writeText(text).then(() => showToast("Copied")).catch(() => {
-    // fallback
     const t = document.createElement("textarea");
     t.value = text;
     document.body.appendChild(t);
@@ -249,22 +516,53 @@ function copyToClipboard(text) {
     showToast("Copied");
   });
 }
-
-/** =========================
- * RENDER
- * ========================= */
-function buildCategoryOptions() {
-  const slugs = CONFIG.templates.slice().sort((a,b)=>a.localeCompare(b));
-  const frag = document.createDocumentFragment();
-  slugs.forEach(slug => {
-    const opt = document.createElement("option");
-    opt.value = slug;
-    opt.textContent = slug;
-    frag.appendChild(opt);
-  });
-  el.category.appendChild(frag);
+function getStars() {
+  try { return new Set(JSON.parse(localStorage.getItem(STORAGE_KEYS.stars) || "[]")); }
+  catch { return new Set(); }
+}
+function setStars(starsSet) {
+  localStorage.setItem(STORAGE_KEYS.stars, JSON.stringify([...starsSet]));
+  syncPickToUrl();
+}
+function getRecents() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.recents) || "[]"); }
+  catch { return []; }
+}
+function pushRecent(slug) {
+  const arr = getRecents().filter(x => x !== slug);
+  arr.unshift(slug);
+  localStorage.setItem(STORAGE_KEYS.recents, JSON.stringify(arr.slice(0, 60)));
+}
+function scrollToGrid(){
+  document.getElementById("gridAnchor").scrollIntoView({behavior:"smooth", block:"start"});
 }
 
+/** =========================
+ * URL State (pick)
+ * ========================= */
+function applyPickFromUrl(){
+  const u = new URL(location.href);
+  const pick = (u.searchParams.get("pick") || "").trim();
+  if (!pick) return;
+  pick.split(",").map(s => s.trim()).filter(Boolean).forEach(slug => {
+    if (CONFIG.templates.includes(slug)) state.stars.add(slug);
+  });
+  setStars(state.stars);
+}
+function syncPickToUrl(){
+  const u = new URL(location.href);
+  if (state.stars.size === 0) {
+    u.searchParams.delete("pick");
+  } else {
+    const val = [...state.stars].sort((a,b)=>a.localeCompare(b)).join(",");
+    u.searchParams.set("pick", val);
+  }
+  history.replaceState(null, "", u.toString());
+}
+
+/** =========================
+ * FILTER + SORT
+ * ========================= */
 function applyFilters() {
   let list = CONFIG.templates.map(slug => ({
     slug,
@@ -273,23 +571,19 @@ function applyFilters() {
     starred: state.stars.has(slug)
   }));
 
-  // query
   if (state.query.trim()) {
     const q = state.query.trim().toLowerCase();
     list = list.filter(x => x.slug.includes(q) || x.name.toLowerCase().includes(q));
   }
 
-  // category
   if (state.category !== "__all__") {
     list = list.filter(x => x.slug === state.category);
   }
 
-  // shortlist
   if (state.shortlistOnly) {
     list = list.filter(x => x.starred);
   }
 
-  // sort
   if (state.sort === "az") {
     list.sort((a,b)=>a.slug.localeCompare(b.slug));
   } else if (state.sort === "za") {
@@ -313,42 +607,92 @@ function applyFilters() {
   return list;
 }
 
+/** =========================
+ * RENDER
+ * ========================= */
+function buildCategoryOptions() {
+  const slugs = CONFIG.templates.slice().sort((a,b)=>a.localeCompare(b));
+  const frag = document.createDocumentFragment();
+  slugs.forEach(slug => {
+    const opt = document.createElement("option");
+    opt.value = slug;
+    opt.textContent = slug;
+    frag.appendChild(opt);
+  });
+  el.category.appendChild(frag);
+}
+
+function renderFeatured(){
+  const chips = CONFIG.featured.filter(x => CONFIG.templates.includes(x));
+  el.featuredChips.innerHTML = chips.map(slug => `
+    <button class="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm"
+      data-featured="${slug}">
+      ${slug}
+    </button>
+  `).join("");
+}
+
+function renderShortlistInline(){
+  const items = [...state.stars].sort((a,b)=>a.localeCompare(b));
+  el.shortlistInline.innerHTML = items.map(slug => `
+    <button class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm"
+      onclick="openModal('${slug.replace(/'/g,"\\'")}')">
+      <span class="w-2.5 h-2.5 rounded-full" style="${coverStyle(slug)}"></span>
+      <span class="font-medium">${slug}</span>
+    </button>
+  `).join("");
+  el.shortlistInlineEmpty.classList.toggle("hidden", items.length !== 0);
+}
+
 function cardTemplate(item) {
   const star = item.starred ? "★" : "☆";
+  const desc = `適用於 ${humanize(item.slug)} 的商用落地頁／形象頁風格`;
   return `
-    <div class="group bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition overflow-hidden">
+    <div class="group bg-white rounded-3xl border border-slate-200 shadow-soft hover:shadow-lift transition overflow-hidden">
       <div class="p-4">
-        <div class="flex items-start gap-3">
-          <div class="flex-1 min-w-0">
-            <div class="text-xs text-slate-500">Template</div>
-            <div class="text-base font-semibold truncate">${item.slug}</div>
-            <div class="text-xs text-slate-500 mt-1 truncate">${item.url}</div>
+        <div class="cover h-28 sm:h-32" style="${coverStyle(item.slug)}">
+          <div class="relative z-10 p-4 h-full flex flex-col justify-between">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="text-xs text-white/80">Template</div>
+                <div class="text-lg font-semibold text-white truncate">${item.slug}</div>
+              </div>
+              <button data-action="star" data-slug="${item.slug}"
+                class="shrink-0 w-11 h-11 rounded-2xl bg-white/15 hover:bg-white/25 border border-white/25 text-white text-lg leading-none">
+                ${star}
+              </button>
+            </div>
+            <div class="flex gap-2">
+              <span class="inline-flex items-center px-2 py-1 rounded-full bg-white/15 border border-white/20 text-white/90 text-xs">
+                ${humanize(item.slug)}
+              </span>
+              ${item.starred ? `
+                <span class="inline-flex items-center px-2 py-1 rounded-full bg-white/15 border border-white/20 text-white/90 text-xs">
+                  Shortlisted
+                </span>` : ``}
+            </div>
           </div>
-          <button data-action="star" data-slug="${item.slug}"
-            class="shrink-0 w-10 h-10 rounded-xl border border-slate-200 hover:bg-slate-50 text-lg leading-none">
-            ${star}
-          </button>
+        </div>
+
+        <div class="mt-4">
+          <div class="text-sm text-slate-700 line-clamp-2">${desc}</div>
+          <div class="text-xs text-slate-400 mt-1 truncate">${item.url}</div>
         </div>
 
         <div class="mt-4 flex flex-wrap gap-2">
           <button data-action="preview" data-slug="${item.slug}"
-            class="px-3 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800 text-sm">
+            class="px-3 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-sm shadow-soft">
             Preview
           </button>
           <a href="${item.url}" target="_blank"
-            class="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm">
+            class="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm">
             Open
           </a>
           <button data-action="copy" data-slug="${item.slug}"
-            class="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm">
+            class="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm">
             Copy Link
           </button>
         </div>
-      </div>
-
-      <div class="px-4 pb-4">
-        <div class="text-xs text-slate-500">建議用途</div>
-        <div class="text-sm text-slate-700 truncate">${humanize(item.slug)}</div>
       </div>
     </div>
   `;
@@ -357,35 +701,154 @@ function cardTemplate(item) {
 function render() {
   const list = applyFilters();
 
+  // counts
   el.countAll.textContent = CONFIG.templates.length;
   el.countShown.textContent = list.length;
   el.countStar.textContent = state.stars.size;
+
+  el.countAllHero.textContent = CONFIG.templates.length;
+  el.countShownHero.textContent = list.length;
+  el.countStarHero.textContent = state.stars.size;
+
+  el.selectedCountBadge.textContent = state.stars.size;
+  el.selectedCountMobile.textContent = state.stars.size;
+
+  // shortlist inline
+  renderShortlistInline();
 
   el.grid.innerHTML = list.map(cardTemplate).join("");
   el.empty.classList.toggle("hidden", list.length !== 0);
 }
 
 /** =========================
- * MODAL
+ * PREVIEW MODAL
  * ========================= */
+let currentModalSlug = null;
+
+function setDeviceMode(mode){
+  // 控制 deviceWrap 尺寸（外框仍置中）
+  if (mode === "mobile") {
+    el.deviceWrap.style.width = "390px";
+    el.deviceWrap.style.height = "780px";
+  } else if (mode === "tablet") {
+    el.deviceWrap.style.width = "820px";
+    el.deviceWrap.style.height = "780px";
+  } else {
+    el.deviceWrap.style.width = "100%";
+    el.deviceWrap.style.height = "100%";
+  }
+}
+
 function openModal(slug) {
+  currentModalSlug = slug;
   const url = templateUrl(slug);
+
   el.modalTitle.textContent = slug;
   el.modalOpenLink.href = url;
-
-  // 只有在打開時才載入 iframe（避免 100 個同時載入）
   el.modalFrame.src = url;
+
+  const starred = state.stars.has(slug);
+  el.modalStar.textContent = starred ? "★ 已收藏" : "☆ 收藏";
 
   el.modalOverlay.classList.remove("hidden");
   document.body.classList.add("modal-open");
+
+  setDeviceMode("desktop");
   pushRecent(slug);
+  render(); // 更新 recent 排序、計數等
 }
 
 function closeModal() {
   el.modalOverlay.classList.add("hidden");
   document.body.classList.remove("modal-open");
-  // 關掉就清空 iframe，避免背景繼續跑
   el.modalFrame.src = "about:blank";
+  currentModalSlug = null;
+}
+
+/** =========================
+ * SHORTLIST PANEL
+ * ========================= */
+function openShortlistPanel(){
+  renderShortlistPanel();
+  el.shortlistOverlay.classList.remove("hidden");
+  document.body.classList.add("modal-open");
+}
+function closeShortlistPanel(){
+  el.shortlistOverlay.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+}
+function renderShortlistPanel(){
+  const items = [...state.stars].sort((a,b)=>a.localeCompare(b));
+  el.shortlistList.innerHTML = items.map(slug => {
+    const url = templateUrl(slug);
+    return `
+      <div class="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 bg-white">
+        <div class="w-10 h-10 rounded-2xl" style="${coverStyle(slug)}"></div>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-semibold truncate">${slug}</div>
+          <div class="text-xs text-slate-500 truncate">${url}</div>
+        </div>
+        <button class="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm"
+          onclick="openModal('${slug.replace(/'/g,"\\'")}')">
+          Preview
+        </button>
+        <button class="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm"
+          onclick="toggleStar('${slug.replace(/'/g,"\\'")}')">
+          移除
+        </button>
+      </div>
+    `;
+  }).join("");
+
+  el.shortlistEmpty.classList.toggle("hidden", items.length !== 0);
+}
+
+function toggleStar(slug){
+  if (state.stars.has(slug)) state.stars.delete(slug);
+  else state.stars.add(slug);
+  setStars(state.stars);
+  render();
+  renderShortlistPanel();
+  if (currentModalSlug === slug) {
+    el.modalStar.textContent = state.stars.has(slug) ? "★ 已收藏" : "☆ 收藏";
+  }
+}
+
+function clearStars(){
+  state.stars = new Set();
+  setStars(state.stars);
+  render();
+  renderShortlistPanel();
+  showToast("已清空");
+}
+
+/** =========================
+ * EXPORT
+ * ========================= */
+function selectionPayload(){
+  const selected = [...state.stars].sort((a,b)=>a.localeCompare(b));
+  const lines = selected.map(slug => `${slug}  ->  ${new URL(templateUrl(slug), location.href).toString()}`);
+  return selected.length
+    ? `Selected templates (${selected.length}):\n` + lines.join("\n")
+    : "No template selected.";
+}
+function exportSelection(){
+  openShortlistPanel();
+}
+function copySelection(){
+  copyToClipboard(selectionPayload());
+}
+function downloadSelectionTxt(){
+  const blob = new Blob([selectionPayload()], {type:"text/plain;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "template-shortlist.txt";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast("已下載");
 }
 
 /** =========================
@@ -395,30 +858,50 @@ el.search.addEventListener("input", (e) => {
   state.query = e.target.value;
   render();
 });
-
 el.category.addEventListener("change", (e) => {
   state.category = e.target.value;
   render();
 });
-
 el.sort.addEventListener("change", (e) => {
   state.sort = e.target.value;
   render();
 });
-
 el.btnShortlist.addEventListener("click", () => {
   state.shortlistOnly = !state.shortlistOnly;
   document.getElementById("shortlistIcon").textContent = state.shortlistOnly ? "★" : "☆";
   render();
 });
+el.btnExport.addEventListener("click", () => openShortlistPanel());
+el.btnShortlistExportTop.addEventListener("click", () => openShortlistPanel());
 
-el.btnExport.addEventListener("click", () => {
-  const selected = [...state.stars].sort((a,b)=>a.localeCompare(b));
-  const lines = selected.map(slug => `${slug}  ->  ${templateUrl(slug)}`);
-  const payload = selected.length
-    ? `Selected templates (${selected.length}):\n` + lines.join("\n")
-    : "No template selected.";
-  copyToClipboard(payload);
+el.btnClear.addEventListener("click", () => {
+  state.query = "";
+  state.category = "__all__";
+  state.sort = "az";
+  state.shortlistOnly = false;
+  el.search.value = "";
+  el.category.value = "__all__";
+  el.sort.value = "az";
+  document.getElementById("shortlistIcon").textContent = "☆";
+  render();
+});
+el.btnRandom.addEventListener("click", () => {
+  const list = applyFilters();
+  if (!list.length) return;
+  const item = list[Math.floor(Math.random()*list.length)];
+  openModal(item.slug);
+});
+
+el.featuredChips.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-featured]");
+  if (!btn) return;
+  const slug = btn.getAttribute("data-featured");
+  el.category.value = slug;
+  state.category = slug;
+  state.query = "";
+  el.search.value = "";
+  render();
+  scrollToGrid();
 });
 
 el.grid.addEventListener("click", (e) => {
@@ -431,15 +914,9 @@ el.grid.addEventListener("click", (e) => {
   if (action === "preview") {
     openModal(slug);
   } else if (action === "copy") {
-    copyToClipboard(location.origin
-      ? new URL(templateUrl(slug), location.href).toString()
-      : templateUrl(slug)
-    );
+    copyToClipboard(new URL(templateUrl(slug), location.href).toString());
   } else if (action === "star") {
-    if (state.stars.has(slug)) state.stars.delete(slug);
-    else state.stars.add(slug);
-    setStars(state.stars);
-    render();
+    toggleStar(slug);
   }
 });
 
@@ -448,15 +925,23 @@ el.modalBackdrop.addEventListener("click", closeModal);
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && !el.modalOverlay.classList.contains("hidden")) closeModal();
 });
-
 el.modalCopyLink.addEventListener("click", () => {
   copyToClipboard(new URL(el.modalOpenLink.href, location.href).toString());
+});
+el.modalStar.addEventListener("click", () => {
+  if (!currentModalSlug) return;
+  toggleStar(currentModalSlug);
+});
+document.querySelectorAll("[data-device]").forEach(btn => {
+  btn.addEventListener("click", () => setDeviceMode(btn.getAttribute("data-device")));
 });
 
 /** =========================
  * INIT
  * ========================= */
 buildCategoryOptions();
+renderFeatured();
+applyPickFromUrl();
 render();
 </script>
 </body>
